@@ -48,9 +48,11 @@
 
 ## Rodar o back-end
 
-Executar o servidor: `node server.js`
+Entre na pasta do servidor: `cd src`
 
-Interface para o banco de dados: `npx prisma studio`
+Execute o servidor: `node server.js`
+
+Para obter uma interface para o banco de dados, abra um novo terminal na pasta do projeto e execute: `npx prisma studio`
 
 # Usando os métodos HTTP
 
@@ -87,19 +89,26 @@ A API retornará um JSON contendo o Token de autenticação, que será necessár
 
 ## Usando o Token
 
-Podemos usar o Token para receber o catálogo armazenado no banco de dados:
+Podemos usar o Token, por exemplo, para obter o catálogo armazenado no banco de dados:
 
 GET -> http://localhost:3000/catalog
 
 No cabeçalho da requisição (Header):
 
+No postman:
+
 Key: Authorization  |  Value: Authorization:tokendeautenticacao123456789
+
+Ou
 
 `Authorization:tokendeautenticacao123456789`
 
 A API retornará uma lista com todos os itens do catálogo.
 
 ## GET
+
+OBS: Todos os métodos abaixo requerem um Token no cabeçalho.
+
 - Obter todos os filmes e séries: GET http://localhost:3000/catalog
 - Obter um filme/série  específico: GET http://localhost:3000/catalog?id=123
 - Obter somente os filmes: GET http://localhost:3000/catalog?type=movie
@@ -126,7 +135,7 @@ A API retornará uma lista com todos os itens do catálogo.
   "name": "João atualizado",
   "password": "senha123",
   "email": "joao@example.com",
-  "profiles": [
+  "profiles":[
     {
       "name": "Perfil 1 atualizado"
     },

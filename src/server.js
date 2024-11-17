@@ -77,25 +77,28 @@ app.post("/login", async (req, res) => {
 });
 
 
-app.get("/users", async (req, res) => {
+app.get("/users", authenticateToken, async (req, res) => {
   try {
-    let users = [];
+    if (req.query.id && req.query.id !== req.user.id) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
-    if (req.query) {
+    let users = [];
+    if (req.query.id) {
       users = await prisma.users.findMany({
         where: {
           id: req.query.id,
         },
       });
-    } else {
-      users = await prisma.users.findMany();
     }
+
     res.status(200).json(users);
   } catch (error) {
     console.error("Error getting users:", error);
     res.status(500).json({ error: "An error occurred while getting the users" });
   }
 });
+
 
 app.post("/users", async (req, res) => {
   try {
@@ -208,7 +211,7 @@ app.get("/profiles", authenticateToken, async (req, res) => {
 
 
 
-app.post("/profiles", async (req, res) => {
+app.post("/profiles", authenticateToken, async (req, res) => {
   try {
     const { name, userId } = req.body;
     const newProfile = await prisma.profiles.create({
@@ -228,19 +231,35 @@ app.post("/profiles", async (req, res) => {
   }
 });
 
-app.delete("/profiles/:id", async (req, res) => {
+app.delete("/profiles/:id", authenticateToken, async (req, res) => {
   try {
     const profileId = req.params.id;
+    const profile = await prisma.profiles.findUnique({
+      where: {
+        id: profileId,
+      },
+    });
+
+    if (!profile) {
+      return res.status(404).json({ error: "Profile not found" });
+    }
+
+    if (profile.userId !== req.user.id) {
+      return res.status(403).json({ error: "You can only delete your own profiles" });
+    }
+
     await prisma.profiles.delete({
       where: {
         id: profileId,
       },
     });
+
     res.status(200).json({ message: "Profile with ID: " + profileId + " deleted" });
   } catch (error) {
     console.error("Error deleting profile:", error);
     res.status(500).json({ error: "An error occurred while deleting the profile" });
   }
 });
+
 
 app.listen(3000);
