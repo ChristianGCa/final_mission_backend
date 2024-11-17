@@ -126,26 +126,5 @@ OBS: Todos os métodos abaixo requerem um Token no cabeçalho.
 `{
   "name": "Perfil 3",
   "userId": 123
+  "img": "www.linkDaImagem.com"
 }`
-
-## PUT
-
-- Atualizar um usuário: PUT http://localhost:3000/users/123 com corpo da requisição:
-`{
-  "name": "João atualizado",
-  "password": "senha123",
-  "email": "joao@example.com",
-  "profiles":[
-    {
-      "name": "Perfil 1 atualizado"
-    },
-    {
-      "name": "Perfil 2 atualizado"
-    }
-  ]
-}`
-
-## DELETE
-
-- Deletar um usuário: DELETE http://localhost:3000/users/123
-- Deletar um perfil: DELETE http://localhost:3000/profiles/123

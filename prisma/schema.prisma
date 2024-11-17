@@ -26,6 +26,7 @@ model profiles {
   name       String
   userId     String     @db.ObjectId
   user       users      @relation(fields: [userId], references: [id])
+  img        String?
 }
 
 model catalog {

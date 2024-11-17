@@ -14,8 +14,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// HTTP Methods
-// for catalog table
+// GET -> http://localhost:3000/catalog
+// Header: Authorization:<token>
 
 app.get("/catalog", authenticateToken, async (req, res) => {
   try {
@@ -44,9 +44,8 @@ app.get("/catalog", authenticateToken, async (req, res) => {
   }
 });
 
-
-// HTTP Methods
-// for users tabel
+// POST -> http://localhost:3000/login
+// Body: email, password
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -76,49 +75,67 @@ app.post("/login", async (req, res) => {
   }
 });
 
+// GET -> http://localhost:3000/users
+// Header: Authorization:<token>
 
 app.get("/users", authenticateToken, async (req, res) => {
   try {
-    if (req.query.id && req.query.id !== req.user.id) {
-      return res.status(403).json({ error: "Access denied" });
+    const userId = req.user.id;
+    const user = await prisma.users.findUnique({
+      where: {
+        id: userId,
+      },
+      include: {
+        profiles: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    let users = [];
-    if (req.query.id) {
-      users = await prisma.users.findMany({
-        where: {
-          id: req.query.id,
-        },
-      });
-    }
-
-    res.status(200).json(users);
+    res.status(200).json(user);
   } catch (error) {
-    console.error("Error getting users:", error);
-    res.status(500).json({ error: "An error occurred while getting the users" });
+    console.error("Error getting user:", error);
+    res.status(500).json({ error: "An error occurred while getting the user" });
   }
 });
 
+// POST -> http://localhost:3000/users
+// Body: name, password, email, profiles (optional)
 
 app.post("/users", async (req, res) => {
   try {
-    let { name, password, email, profiles } = req.body;
+    const { name, password, email, profiles } = req.body;
 
     if (!name || !password || !email) {
       return res
         .status(400)
-        .json({ error: "Name, password and email are required" });
+        .json({ error: "Name, password, and email are required" });
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    const defaultProfiles = [
+      { name: name, img: "https://cdn-icons-png.flaticon.com/512/1253/1253756.png" },
+      { name: "Kids", img: "https://cdn-icons-png.flaticon.com/512/2073/2073146.png" },
+    ];
+
+    const allProfiles = [
+      ...defaultProfiles,
+      ...(profiles || []).map(profile => ({
+        name: profile.name,
+        img: profile.img,
+      })),
+    ];
+
     const newUser = await prisma.users.create({
       data: {
         name,
         password: hashedPassword,
         email,
         profiles: {
-          create: profiles?.map((profile) => ({
-            name: profile.name,
-          })) || [],
+          create: allProfiles,
         },
       },
       include: {
@@ -129,38 +146,9 @@ app.post("/users", async (req, res) => {
     res.status(201).json(newUser);
 
     console.log("New user created:", newUser);
-
   } catch (error) {
     console.error("Error creating user:", error);
     res.status(500).json({ error: "An error occurred while creating the user" });
-  }
-});
-
-
-
-app.put("/users/:id", authenticateToken, async (req, res) => {
-  try {
-    const hashedPassword = req.body.password
-      ? await bcrypt.hash(req.body.password, 10)
-      : undefined;
-
-    const data = {
-      name: req.body.name,
-      email: req.body.email,
-      ...(hashedPassword && { password: hashedPassword }),
-    };
-
-    await prisma.users.update({
-      where: {
-        id: req.params.id,
-      },
-      data,
-    });
-
-    res.status(200).json(req.body);
-  } catch (error) {
-    console.error("Error updating user:", error);
-    res.status(500).json({ error: "An error occurred while updating the user" });
   }
 });
 
@@ -187,11 +175,8 @@ app.delete("/users/:id", authenticateToken, async (req, res) => {
   }
 });
 
-// HTTP Methods
-// for profiles table
-// The method can receive an user ID as a query parameter for filtering profiles by user
-// Example normal: GET -> http://localhost:3000/profiles
-// With userID: GET -> http://localhost:3000/profiles?userId=123
+// GET -> http://localhost:3000/profiles
+// Header: Authorization:<token>
 
 app.get("/profiles", authenticateToken, async (req, res) => {
   try {
@@ -206,28 +191,6 @@ app.get("/profiles", authenticateToken, async (req, res) => {
   } catch (error) {
     console.error("Error getting profiles:", error);
     res.status(500).json({ error: "An error occurred while getting the profiles" });
-  }
-});
-
-
-
-app.post("/profiles", authenticateToken, async (req, res) => {
-  try {
-    const { name, userId } = req.body;
-    const newProfile = await prisma.profiles.create({
-      data: {
-        name: name,
-        user: {
-          connect: {
-            id: userId,
-          },
-        },
-      },
-    });
-    res.status(201).json(newProfile);
-  } catch (error) {
-    console.error("Error creating profile:", error);
-    res.status(500).json({ error: "An error occurred while creating the profile" });
   }
 });
 
