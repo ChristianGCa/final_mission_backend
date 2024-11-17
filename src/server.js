@@ -1,6 +1,12 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import cors from "cors";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { authenticateToken } from "../middlewares/authenticateToken.js";
+import dotenv from "dotenv";
+
+const SECRET_KEY = process.env.SECRET_KEY || "defaultSecret";
 
 const prisma = new PrismaClient();
 const app = express();
@@ -11,29 +17,26 @@ app.use(cors());
 // HTTP Methods
 // for catalog table
 
-app.get("/catalog", async (req, res) => {
+app.get("/catalog", authenticateToken, async (req, res) => {
   try {
     let catalog = [];
 
-    if (req.query) {
-      if (req.query.type) {
-        catalog = await prisma.catalog.findMany({
-          where: {
-            type: req.query.type,
-          },
-        });
-      } else if (req.query.id) {
-        catalog = await prisma.catalog.findMany({
-          where: {
-            id: req.query.id,
-          },
-        });
-      } else {
-        catalog = await prisma.catalog.findMany();
-      }
+    if (req.query.type) {
+      catalog = await prisma.catalog.findMany({
+        where: {
+          type: req.query.type,
+        },
+      });
+    } else if (req.query.id) {
+      catalog = await prisma.catalog.findMany({
+        where: {
+          id: req.query.id,
+        },
+      });
     } else {
       catalog = await prisma.catalog.findMany();
     }
+
     res.status(200).json(catalog);
   } catch (error) {
     console.error("Error getting catalog:", error);
@@ -41,8 +44,38 @@ app.get("/catalog", async (req, res) => {
   }
 });
 
+
 // HTTP Methods
 // for users tabel
+
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await prisma.users.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: "Invalid password" });
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, {
+      expiresIn: "1h",
+    });
+
+    res.status(200).json({ token });
+  } catch (error) {
+    console.error("Error logging in:", error);
+    res.status(500).json({ error: "An error occurred while logging in" });
+  }
+});
+
 
 app.get("/users", async (req, res) => {
   try {
@@ -66,9 +99,6 @@ app.get("/users", async (req, res) => {
 
 app.post("/users", async (req, res) => {
   try {
-    console.log("Request received at /users");
-    console.log("Request body:", req.body);
-
     let { name, password, email, profiles } = req.body;
 
     if (!name || !password || !email) {
@@ -76,18 +106,14 @@ app.post("/users", async (req, res) => {
         .status(400)
         .json({ error: "Name, password and email are required" });
     }
-
-    name = String(name);
-    password = String(password);
-    email = String(email);
-
+    const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await prisma.users.create({
       data: {
-        name: name,
-        password: password,
-        email: email,
+        name,
+        password: hashedPassword,
+        email,
         profiles: {
-          create: profiles?.map(profile => ({
+          create: profiles?.map((profile) => ({
             name: profile.name,
           })) || [],
         },
@@ -98,6 +124,9 @@ app.post("/users", async (req, res) => {
     });
 
     res.status(201).json(newUser);
+
+    console.log("New user created:", newUser);
+
   } catch (error) {
     console.error("Error creating user:", error);
     res.status(500).json({ error: "An error occurred while creating the user" });
@@ -105,23 +134,26 @@ app.post("/users", async (req, res) => {
 });
 
 
-app.put("/users/:id", async (req, res) => {
+
+app.put("/users/:id", authenticateToken, async (req, res) => {
   try {
+    const hashedPassword = req.body.password
+      ? await bcrypt.hash(req.body.password, 10)
+      : undefined;
+
+    const data = {
+      name: req.body.name,
+      email: req.body.email,
+      ...(hashedPassword && { password: hashedPassword }),
+    };
+
     await prisma.users.update({
       where: {
         id: req.params.id,
       },
-      data: {
-        name: req.body.name,
-        password: req.body.password,
-        email: req.body.email,
-        profiles: {
-          create: req.body.profiles?.map(profile => ({
-            name: profile.name,
-          })) || [],
-        },
-      },
+      data,
     });
+
     res.status(200).json(req.body);
   } catch (error) {
     console.error("Error updating user:", error);
@@ -129,7 +161,7 @@ app.put("/users/:id", async (req, res) => {
   }
 });
 
-app.delete("/users/:id", async (req, res) => {
+app.delete("/users/:id", authenticateToken, async (req, res) => {
   try {
     const userId = req.params.id;
 
@@ -158,20 +190,14 @@ app.delete("/users/:id", async (req, res) => {
 // Example normal: GET -> http://localhost:3000/profiles
 // With userID: GET -> http://localhost:3000/profiles?userId=123
 
-app.get("/profiles", async (req, res) => {
+app.get("/profiles", authenticateToken, async (req, res) => {
   try {
-    let profiles = [];
-    if (req.query.userId) {
-      profiles = await prisma.profiles.findMany({
-        where: {
-          user: {
-            id: req.query.userId,
-          },
-        },
-      });
-    } else {
-      profiles = await prisma.profiles.findMany();
-    }
+    const userId = req.user.id;
+    const profiles = await prisma.profiles.findMany({
+      where: {
+        userId: userId,
+      },
+    });
 
     res.status(200).json(profiles);
   } catch (error) {
@@ -179,6 +205,8 @@ app.get("/profiles", async (req, res) => {
     res.status(500).json({ error: "An error occurred while getting the profiles" });
   }
 });
+
+
 
 app.post("/profiles", async (req, res) => {
   try {

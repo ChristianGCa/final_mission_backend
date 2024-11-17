@@ -22,6 +22,13 @@
 - Instalar o MongoDB:
 `npm install mongodb`
 
+- Instalar jsonwebtoken e bcryptjs para a autenticação e hashing de senhas:
+`npm install jsonwebtoken bcryptjs`
+
+- Instalar dotenv para carregar variáveis de ambiente de um arquivo .env para process.env, no Node.js:
+`npm install dotenv`
+
+
 # Instruções
 
 - Crie um arquivo chamado ".env":
@@ -29,6 +36,9 @@
 
 - Abra o novo arquivo e adicione a url do banco em uma variável chamada DATABASE_URL, colocando o nome de usuário, a senha e o nome do banco:<p>
 `DATABASE_URL="mongodb+srv://<USUARIO>:<SENHA>@aeroflix.suw3x.mongodb.net/NOME_DO_BANCO?retryWrites=true&w=majority&appName=aeroflix"`
+
+- Adicione também outra variável chamada SECRET_KEY e atribua um código de autenticação:
+`SECRET_KEY="senha"`
 
 - Execute para importar o cliente Prisma:
 `npx prisma generate`
@@ -44,6 +54,51 @@ Interface para o banco de dados: `npx prisma studio`
 
 # Usando os métodos HTTP
 
+## Criar usuário
+
+POST -> http://localhost:3000/users
+
+Exemplo de JSON no corpo da requisição:
+`{
+    "name": "Nome",
+    "email": "a@email.com",
+    "password": "senha",
+    "profiles": [
+        { "name": "Perfil 1" },
+        { "name": "Perfil 2" }
+    ]
+}`
+
+## Efetuar login
+
+POST -> http://localhost:3000/login
+
+JSON no corpo da requisição (Body):
+`{
+    "email": "a@email.com",
+    "password": "senha",
+}`
+
+A API retornará um JSON contendo o Token de autenticação, que será necessário para o usuário fazer outras requisições:
+
+{
+    "token": "tokendeautenticacao123456789"
+}
+
+## Usando o Token
+
+Podemos usar o Token para receber o catálogo armazenado no banco de dados:
+
+GET -> http://localhost:3000/catalog
+
+No cabeçalho da requisição (Header):
+
+Key: Authorization  |  Value: Authorization:tokendeautenticacao123456789
+
+`Authorization:tokendeautenticacao123456789`
+
+A API retornará uma lista com todos os itens do catálogo.
+
 ## GET
 - Obter todos os filmes e séries: GET http://localhost:3000/catalog
 - Obter um filme/série  específico: GET http://localhost:3000/catalog?id=123
@@ -57,20 +112,6 @@ Interface para o banco de dados: `npx prisma studio`
 - Obter perfis de um usuário específico: GET http://localhost:3000/profiles?userId=123
 
 ## POST
-- Criar um novo usuário: POST http://localhost:3000/users com corpo da requisição:
-`{
-  "name": "João",
-  "password": "senha123",
-  "email": "joao@example.com",
-  "profiles": [
-    {
-      "name": "Perfil 1"
-    },
-    {
-      "name": "Perfil 2"
-    }
-  ]
-}`
 
 - Criar um novo perfil: POST http://localhost:3000/profiles com corpo da requisição:
 `{
