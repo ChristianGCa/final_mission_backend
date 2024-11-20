@@ -22,6 +22,9 @@
 - Instalar o MongoDB:
 `npm install mongodb`
 
+- Instalar o cors:
+`npm install cors`
+
 - Instalar jsonwebtoken e bcryptjs para a autenticação e hashing de senhas:
 `npm install jsonwebtoken bcryptjs`
 
