@@ -4,7 +4,6 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { authenticateToken } from "../middlewares/authenticateToken.js";
-import dotenv from "dotenv";
 
 const SECRET_KEY = process.env.SECRET_KEY || "defaultSecret";
 
@@ -39,8 +38,8 @@ app.get("/catalog", authenticateToken, async (req, res) => {
 
     res.status(200).json(catalog);
   } catch (error) {
-    console.error("Error getting catalog:", error);
-    res.status(500).json({ error: "An error occurred while getting the catalog" });
+    console.error("Erro ao obter o catálogo:", error);
+    res.status(500).json({ error: "Um erro ocorreu ao obter o catálogo" });
   }
 });
 
@@ -56,22 +55,22 @@ app.post("/login", async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "Usuário não encontrado" });
     }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
     if (!passwordMatch) {
-      return res.status(401).json({ error: "Invalid password" });
+      return res.status(401).json({ error: "Senha inválida" });
     }
 
     const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, {
-      expiresIn: "1h",
+      expiresIn: "24h",
     });
 
     res.status(200).json({ token });
   } catch (error) {
-    console.error("Error logging in:", error);
-    res.status(500).json({ error: "An error occurred while logging in" });
+    console.error("Erro ao fazer o login:", error);
+    res.status(500).json({ error: "Um erro ocorreu ao fazer o login" });
   }
 });
 
@@ -91,13 +90,13 @@ app.get("/users", authenticateToken, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: "Usuário não encontrado" });
     }
 
     res.status(200).json(user);
   } catch (error) {
-    console.error("Error getting user:", error);
-    res.status(500).json({ error: "An error occurred while getting the user" });
+    console.error("Erro ao obter o usuário:", error);
+    res.status(500).json({ error: "Um erro ocorreu ao obter o usuário" });
   }
 });
 
@@ -111,7 +110,7 @@ app.post("/users", async (req, res) => {
     if (!name || !password || !email) {
       return res
         .status(400)
-        .json({ error: "Name, password, and email are required" });
+        .json({ error: "Nome de usuário, senha e email são obrigatórios" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -143,12 +142,16 @@ app.post("/users", async (req, res) => {
       },
     });
 
-    res.status(201).json(newUser);
+    const token = jwt.sign({ id: newUser.id, email: newUser.email }, SECRET_KEY, {
+      expiresIn: "24h",
+    });
 
-    console.log("New user created:", newUser);
+    res.status(201).json({ user: newUser, token });
+
+    console.log("Novo usuário criado:", newUser);
   } catch (error) {
-    console.error("Error creating user:", error);
-    res.status(500).json({ error: "An error occurred while creating the user" });
+    console.error("Erro ao criar o usuário:", error);
+    res.status(500).json({ error: "Um erro ocorreu ao criar o usuário" });
   }
 });
 
@@ -168,10 +171,10 @@ app.delete("/users/:id", authenticateToken, async (req, res) => {
       },
     });
 
-    res.status(200).json({ message: "User with ID: " + userId + " deleted" });
+    res.status(200).json({ message: "Usuário com o ID: " + userId + " deletado" });
   } catch (error) {
     console.error("Error deleting user:", error);
-    res.status(500).json({ error: "An error occurred while deleting the user" });
+    res.status(500).json({ error: "Um erro ocorreu ao deletar o usuário" });
   }
 });
 
@@ -189,8 +192,8 @@ app.get("/profiles", authenticateToken, async (req, res) => {
 
     res.status(200).json(profiles);
   } catch (error) {
-    console.error("Error getting profiles:", error);
-    res.status(500).json({ error: "An error occurred while getting the profiles" });
+    console.error("Erro ao obter os perfis:", error);
+    res.status(500).json({ error: "Um erro ocorreu ao obter os perfis" });
   }
 });
 
@@ -204,11 +207,11 @@ app.delete("/profiles/:id", authenticateToken, async (req, res) => {
     });
 
     if (!profile) {
-      return res.status(404).json({ error: "Profile not found" });
+      return res.status(404).json({ error: "Perfil não encontrado" });
     }
 
     if (profile.userId !== req.user.id) {
-      return res.status(403).json({ error: "You can only delete your own profiles" });
+      return res.status(403).json({ error: "Você não tem permissão para deletar esse perfil" });
     }
 
     await prisma.profiles.delete({
@@ -217,10 +220,10 @@ app.delete("/profiles/:id", authenticateToken, async (req, res) => {
       },
     });
 
-    res.status(200).json({ message: "Profile with ID: " + profileId + " deleted" });
+    res.status(200).json({ message: "Perfil com o ID: " + profileId + " deletado" });
   } catch (error) {
-    console.error("Error deleting profile:", error);
-    res.status(500).json({ error: "An error occurred while deleting the profile" });
+    console.error("Erro ao deletar o perfil:", error);
+    res.status(500).json({ error: "Um erro ocorreu ao deletar o perfil" });
   }
 });
 
