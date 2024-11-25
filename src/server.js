@@ -150,6 +150,9 @@ app.post("/users", async (req, res) => {
 
     console.log("Novo usuário criado:", newUser);
   } catch (error) {
+    if (error.code === 'P2002' && error.meta.target.includes('email')) {
+      return res.status(400).json({ error: "Email já existe" });
+    }
     console.error("Erro ao criar o usuário:", error);
     res.status(500).json({ error: "Um erro ocorreu ao criar o usuário" });
   }
