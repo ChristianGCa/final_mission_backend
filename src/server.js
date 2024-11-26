@@ -116,9 +116,12 @@ app.post("/users", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const defaultProfiles = [
-      { name: name, img: "https://cdn-icons-png.flaticon.com/512/1253/1253756.png" },
-      { name: "Kids", img: "https://cdn-icons-png.flaticon.com/512/2073/2073146.png" },
+      { name: name.split(" ")[0], img: "adult.svg" },
+      { name: "Kids", img: "kids.svg" },
     ];
+
+    const defaultPhone = "(55) 98765-4321";
+    const defaultAddress = "Rua das Acácias, 123, Bairro Jardim Florido, Cidade do Sol, Estado da Esperança, CEP 12345-678, Brasil";
 
     const allProfiles = [
       ...defaultProfiles,
@@ -133,6 +136,8 @@ app.post("/users", async (req, res) => {
         name,
         password: hashedPassword,
         email,
+        phone: defaultPhone,
+        address: defaultAddress,
         profiles: {
           create: allProfiles,
         },

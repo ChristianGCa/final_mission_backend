@@ -18,6 +18,8 @@ model users {
   name       String
   password   String
   email      String     @unique
+  phone      String?
+  address    String?
   profiles   profiles[] 
 }
 
